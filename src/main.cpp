@@ -388,7 +388,7 @@ void postConnectSetup() {
   httpServer->onSettingsSaved(applySettings);
   httpServer->onGroupDeleted(onGroupDeleted);
   httpServer->onAbout(aboutHandler);
-  httpServer->on("/description.xml", HTTP_GET, []() { SSDP.schema(httpServer->client()); });
+ // httpServer->on("/description.xml", HTTP_GET, []() { SSDP.schema(httpServer->client()); });
   httpServer->begin();
 
   transitions.addListener(
