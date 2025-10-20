@@ -7,6 +7,19 @@
 #include <WiFiClient.h>
 #include <MiLightRadioConfig.h>
 #include <AboutHelper.h>
+#if defined(ARDUINO_ARCH_ESP32)
+  #ifdef printf_P
+    #undef printf_P
+  #endif
+  #ifndef PSTR
+    #define PSTR(x) x
+  #endif
+  // printf portable (ESP32)
+  #define MIHUB_PRINTF(fmt, ...) Serial.printf(fmt, ##__VA_ARGS__)
+#else
+  // printf portable (ESP8266)
+  #define MIHUB_PRINTF(fmt, ...) Serial.printf_P(PSTR(fmt), ##__VA_ARGS__)
+#endif
 
 
 static const char* STATUS_CONNECTED = "connected";
@@ -217,7 +230,7 @@ void MqttClient::publishCallback(char* topic, byte* payload, int length) {
   memcpy(cstrPayload, payload, sizeof(byte)*length);
 
 #ifdef MQTT_DEBUG
-  printf("MqttClient - Got message on topic: %s\n%s\n", topic, cstrPayload);
+  MIHUB_PRINTF("MqttClient - WARNING: could not find device alias: `%s'. Ignoring packet.\n", alias.c_str());
 #endif
 
   auto patternIterator = std::make_shared<TokenIterator>(settings.mqttTopicPattern.c_str(), settings.mqttTopicPattern.length(), '/');
