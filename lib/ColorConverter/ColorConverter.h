@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include <math.h>
 
 // ColorConverter minimal compatible shim for MiLight Hub.
 // Provides HSV <-> RGB and Kelvin -> RGB conversions used by ParsedColor.cpp.
@@ -40,64 +41,84 @@ public:
     b = (uint8_t)((bf + m) * 255.0f + 0.5f);
   }
 
-// --- Helpers ---
+  // --- Helpers ---
   static inline uint8_t clamp8_u16(uint16_t x) { return (x > 255) ? 255 : (uint8_t)x; }
 
-// Overload: RGB uint8_t + HSV en tableau float[3]
+  // Overload: RGB uint8_t + HSV en tableau float[3]
   static void rgbToHsv(uint8_t r, uint8_t g, uint8_t b, float hsv[3]) {
     float h, s, v;
     rgbToHsv(r, g, b, h, s, v);
     hsv[0] = h; hsv[1] = s; hsv[2] = v; 
   }
 
-// Overload: RGB uint8_t + HSV en tableau double[3]
+  // Overload: RGB uint8_t + HSV en tableau double[3]
   static void rgbToHsv(uint8_t r, uint8_t g, uint8_t b, double hsv[3]) {
     float h, s, v;
     rgbToHsv(r, g, b, h, s, v);
     hsv[0] = (double)h; hsv[1] = (double)s; hsv[2] = (double)v;
   }
 
-// Overload: RGB uint16_t + HSV en tableau double[3]
+  // Overload: RGB uint16_t + HSV en tableau double[3]
   static void rgbToHsv(uint16_t r, uint16_t g, uint16_t b, double hsv[3]) {
     rgbToHsv(clamp8_u16(r), clamp8_u16(g), clamp8_u16(b), hsv);
   }
 
-// Overload: RGB uint16_t + HSV en tableau float[3]
+  // Overload: RGB uint16_t + HSV en tableau float[3]
   static void rgbToHsv(uint16_t r, uint16_t g, uint16_t b, float hsv[3]) {
     rgbToHsv(clamp8_u16(r), clamp8_u16(g), clamp8_u16(b), hsv);
   }
 
-// (facultatif) Surcharges symétriques pour HSV->RGB si le projet les appelle un jour
-  static void hsvArrayToRgb(const float hsv[3], uint8_t &r, uint8_t &g, uint8_t &b) {
-    hsvToRgb(hsv[0], hsv[1], hsv[2], r, g, b);
+  // ---- hsvToRgb surcharges (pour appels avec tableaux et doubles) ----
+
+  // h,s,v en float -> rgb (uint8_t[3])
+  static void hsvToRgb(float h, float s, float v, uint8_t rgb[3]) {
+    uint8_t r,g,b;
+    hsvToRgb(h, s, v, r, g, b);
+    rgb[0] = r; rgb[1] = g; rgb[2] = b;
   }
-  static void hsvArrayToRgb(const double hsv[3], uint8_t &r, uint8_t &g, uint8_t &b) {
-    hsvToRgb((float)hsv[0], (float)hsv[1], (float)hsv[2], r, g, b);
+
+  // h,s,v en double -> rgb (uint8_t[3])
+  static void hsvToRgb(double h, double s, double v, uint8_t rgb[3]) {
+    uint8_t r,g,b;
+    hsvToRgb((float)h, (float)s, (float)v, r, g, b);
+    rgb[0] = r; rgb[1] = g; rgb[2] = b;
+  }
+
+  // hsv (float[3]) -> rgb (uint8_t[3])
+  static void hsvToRgb(const float hsv[3], uint8_t rgb[3]) {
+    hsvToRgb(hsv[0], hsv[1], hsv[2], rgb);
+  }
+
+  // hsv (double[3]) -> rgb (uint8_t[3])
+  static void hsvToRgb(const double hsv[3], uint8_t rgb[3]) {
+    hsvToRgb((float)hsv[0], (float)hsv[1], (float)hsv[2], rgb);
+  }
+
+  // (optionnel) versions uint16_t si nécessaires un jour
+  static void hsvArrayToRgb(const float hsv[3], uint16_t &r, uint16_t &g, uint16_t &b) {
+    uint8_t rr,gg,bb; hsvToRgb(hsv[0], hsv[1], hsv[2], rr, gg, bb);
+    r = rr; g = gg; b = bb;
   }
   static void hsvArrayToRgb(const double hsv[3], uint16_t &r, uint16_t &g, uint16_t &b) {
-    uint8_t rr, gg, bb; hsvToRgb((float)hsv[0], (float)hsv[1], (float)hsv[2], rr, gg, bb);
+    uint8_t rr,gg,bb; hsvToRgb((float)hsv[0], (float)hsv[1], (float)hsv[2], rr, gg, bb);
     r = rr; g = gg; b = bb;
   }
 
-// Simple approximation to convert color temperature (Kelvin) to RGB.
-  // kelvin typical range: 1000..40000
+  // Kelvin -> RGB (approximation standard)
   static void colorTemperatureToRgb(uint16_t kelvin, uint8_t &r, uint8_t &g, uint8_t &b) {
     float temp = kelvin / 100.0f;
     float rf, gf, bf;
-    // Red
     if (temp <= 66.0f) rf = 255.0f;
     else {
       rf = 329.698727446f * powf(temp - 60.0f, -0.1332047592f);
       if (rf < 0) rf = 0; if (rf > 255) rf = 255;
     }
-    // Green
     if (temp <= 66.0f) {
       gf = 99.4708025861f * logf(temp) - 161.1195681661f;
     } else {
       gf = 288.1221695283f * powf(temp - 60.0f, -0.0755148492f);
     }
     if (gf < 0) gf = 0; if (gf > 255) gf = 255;
-    // Blue
     if (temp >= 66.0f) bf = 255.0f;
     else if (temp <= 19.0f) bf = 0.0f;
     else bf = 138.5177312231f * logf(temp - 10.0f) - 305.0447927307f;
@@ -108,4 +129,3 @@ public:
     b = (uint8_t)(bf + 0.5f);
   }
 };
-
