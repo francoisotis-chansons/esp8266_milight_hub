@@ -406,10 +406,11 @@ void postConnectSetup() {
   initMilightUdpServers();
 
   #if defined(ARDUINO_ARCH_ESP32)
-    Serial.printf("... \n", args...);
+    Serial.printf("Setup complete (version %s)\n", QUOTE(MILIGHT_HUB_VERSION));
   #else
-    Serial.printf_P(PSTR("... \n"), args...);
+    Serial.printf_P(PSTR("Setup complete (version %s)\n"), QUOTE(MILIGHT_HUB_VERSION));
   #endif
+
 
 }
 
