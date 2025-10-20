@@ -27,7 +27,7 @@
 
 #ifdef ESP8266
   #include <ESP8266mDNS.h>
-  #include <ESP8266SSDP.h>
+//  #include <ESP8266SSDP.h>
 #elif ESP32
  // #include <ESP32SSDP.h>
 
@@ -376,13 +376,13 @@ void postConnectSetup() {
 
   MDNS.addService("http", "tcp", 80);
 
-  SSDP.setSchemaURL("description.xml");
-  SSDP.setHTTPPort(80);
-  SSDP.setName("ESP8266 MiLight Gateway");
-  SSDP.setSerialNumber(getESPId());
-  SSDP.setURL("/");
-  SSDP.setDeviceType("upnp:rootdevice");
-  SSDP.begin();
+ // SSDP.setSchemaURL("description.xml");
+ // SSDP.setHTTPPort(80);
+ // SSDP.setName("ESP8266 MiLight Gateway");
+ // SSDP.setSerialNumber(getESPId());
+ // SSDP.setURL("/");
+ // SSDP.setDeviceType("upnp:rootdevice");
+ // SSDP.begin();
 
   httpServer = new MiLightHttpServer(settings, milightClient, stateStore, packetSender, radios, transitions);
   httpServer->onSettingsSaved(applySettings);
