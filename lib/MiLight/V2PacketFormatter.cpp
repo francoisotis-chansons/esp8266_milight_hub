@@ -1,8 +1,22 @@
 #include <V2PacketFormatter.h>
 #include <V2RFEncoding.h>
 
-
 #define GROUP_COMMAND_ARG(status, groupId, numGroups) ( groupId + (status == OFF ? (numGroups + 1) : 0) )
+
+// --- Compat ESP32 / ESP8266 pour printf/sprintf en PROGMEM ---
+#if defined(ARDUINO_ARCH_ESP32)
+  // Sur ESP32, pas de printf_P/sprintf_P natif
+  #ifdef printf_P
+    #undef printf_P
+  #endif
+  #ifndef PSTR
+    #define PSTR(x) x
+  #endif
+  #define sprintf_P sprintf
+  #define MIHUB_PRINTF(fmt, ...) Serial.printf(fmt, ##__VA_ARGS__)
+#else
+  #define MIHUB_PRINTF(fmt, ...) Serial.printf_P(PSTR(fmt), ##__VA_ARGS__)
+#endif
 
 V2PacketFormatter::V2PacketFormatter(const MiLightRemoteType deviceType, uint8_t protocolId, uint8_t numGroups)
   : PacketFormatter(deviceType, 9),
@@ -16,7 +30,8 @@ bool V2PacketFormatter::canHandle(const uint8_t *packet, const size_t packetLen)
   V2RFEncoding::decodeV2Packet(packetCopy);
 
 #ifdef DEBUG_PRINTF
-  Serial.printf_P(PSTR("Testing whether formater for ID %d can handle packet: with protocol ID %d...\n"), protocolId, packetCopy[V2_PROTOCOL_ID_INDEX]);
+  MIHUB_PRINTF("Testing whether formater for ID %d can handle packet: with protocol ID %d...\n",
+               protocolId, packetCopy[V2_PROTOCOL_ID_INDEX]);
 #endif
 
   return packetCopy[V2_PROTOCOL_ID_INDEX] == protocolId;
@@ -104,10 +119,9 @@ void V2PacketFormatter::switchMode(const GroupState& currentState, BulbMode desi
       updateColorWhite();
       break;
     default:
-      Serial.printf_P(PSTR("V2PacketFormatter::switchMode: Request to switch to unknown mode %d\n"), desiredMode);
+      MIHUB_PRINTF("V2PacketFormatter::switchMode: Request to switch to unknown mode %d\n", desiredMode);
       break;
   }
-
 }
 
 uint8_t V2PacketFormatter::tov2scale(uint8_t value, uint8_t endValue, uint8_t interval, bool reverse) {
