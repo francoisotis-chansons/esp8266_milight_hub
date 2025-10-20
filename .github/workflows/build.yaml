@@ -1,30 +1,24 @@
-name: Build
+name: Build MiLightHub ESP32
 
-on: [push]
+on:
+  workflow_dispatch:
+  push:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          path: |
-            ~/.cache/pip
-            ~/.platformio/.cache
-            .pio/build
-          key: ${{ runner.os }}-pio
-      - uses: actions/setup-python@v4
+          python-version: "3.11"
+      - name: Install PlatformIO
+        run: pip install -U platformio
+      - name: Build (esp32dev)
+        run: pio run -e esp32dev
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
         with:
-          python-version: '3.9'
-      - name: Install PlatformIO Core
-        run: pip install --upgrade platformio
-
-      - name: Build PlatformIO Project
-        run: pio run
-
-      - name: Build docs
-        run: |
-          npm install -g swagger-cli redoc-cli
-          swagger-cli validate ./docs/openapi.yaml
+          name: milight-hub-esp32dev
+          path: .pio/build/esp32dev/firmware.bin
