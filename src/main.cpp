@@ -489,7 +489,11 @@ void setup() {
 
   // We have a saved static IP, let's try and use it.
   if (settings.wifiStaticIP.length() > 0) {
+  #if defined(ARDUINO_ARCH_ESP32)
+    Serial.printf("We have a static IP: %s\n", settings.wifiStaticIP.c_str());
+  #else
     Serial.printf_P(PSTR("We have a static IP: %s\n"), settings.wifiStaticIP.c_str());
+  #endif
 
     IPAddress _ip, _subnet, _gw;
     _ip.fromString(settings.wifiStaticIP);
@@ -498,6 +502,7 @@ void setup() {
 
     wifiManager->setSTAStaticIPConfig(_ip,_gw,_subnet);
   }
+
 
   wifiManager->setConfigPortalTimeout(180);
   wifiManager->setConfigPortalTimeoutCallback([]() {
