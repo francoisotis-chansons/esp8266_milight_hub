@@ -4,6 +4,14 @@
 #include <RGBConverter.h>
 #include <BulbId.h>
 #include <MiLightCommands.h>
+#if defined(ARDUINO_ARCH_ESP32)
+  #ifdef printf_P
+    #undef printf_P
+  #endif
+  #ifndef PSTR
+    #define PSTR(x) x
+  #endif
+#endif
 
 
 static const char* BULB_MODE_NAMES[] = {
