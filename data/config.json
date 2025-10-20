@@ -1,1 +1,18 @@
+{
+  "version": 2,
+  "mqtt_server": "192.168.50.119",
+  "mqtt_username": "mqtt-francois",
+  "mqtt_password": "MQTT6118!",
+  "mqtt_topic_pattern": "milight/:device_id/:group_id",
+  "mqtt_update_topic_pattern": "milight/updates/:device_id/:group_id",
+  "mqtt_state_topic_pattern": "milight/states/:device_id/:group_id",
+  "radio_interface_type": "nrf24",
+  "nrf24_ce_pin": 17,
+  "nrf24_cs_pin": 5,
+  "packet_repeats": 50,
+  "device_ids": [1],
+  "gateway_configs": [
+    { "device_id": 1, "type": "rgb_cct", "zones": 4 }
+  ]
+}
 
