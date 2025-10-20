@@ -40,7 +40,46 @@ public:
     b = (uint8_t)((bf + m) * 255.0f + 0.5f);
   }
 
-  // Simple approximation to convert color temperature (Kelvin) to RGB.
+// --- Helpers ---
+  static inline uint8_t clamp8_u16(uint16_t x) { return (x > 255) ? 255 : (uint8_t)x; }
+
+// Overload: RGB uint8_t + HSV en tableau float[3]
+  static void rgbToHsv(uint8_t r, uint8_t g, uint8_t b, float hsv[3]) {
+    float h, s, v;
+    rgbToHsv(r, g, b, h, s, v);
+    hsv[0] = h; hsv[1] = s; hsv[2] = v; 
+  }
+
+// Overload: RGB uint8_t + HSV en tableau double[3]
+  static void rgbToHsv(uint8_t r, uint8_t g, uint8_t b, double hsv[3]) {
+    float h, s, v;
+    rgbToHsv(r, g, b, h, s, v);
+    hsv[0] = (double)h; hsv[1] = (double)s; hsv[2] = (double)v;
+  }
+
+// Overload: RGB uint16_t + HSV en tableau double[3]
+  static void rgbToHsv(uint16_t r, uint16_t g, uint16_t b, double hsv[3]) {
+    rgbToHsv(clamp8_u16(r), clamp8_u16(g), clamp8_u16(b), hsv);
+  }
+
+// Overload: RGB uint16_t + HSV en tableau float[3]
+  static void rgbToHsv(uint16_t r, uint16_t g, uint16_t b, float hsv[3]) {
+    rgbToHsv(clamp8_u16(r), clamp8_u16(g), clamp8_u16(b), hsv);
+  }
+
+// (facultatif) Surcharges symétriques pour HSV->RGB si le projet les appelle un jour
+  static void hsvArrayToRgb(const float hsv[3], uint8_t &r, uint8_t &g, uint8_t &b) {
+    hsvToRgb(hsv[0], hsv[1], hsv[2], r, g, b);
+  }
+  static void hsvArrayToRgb(const double hsv[3], uint8_t &r, uint8_t &g, uint8_t &b) {
+    hsvToRgb((float)hsv[0], (float)hsv[1], (float)hsv[2], r, g, b);
+  }
+  static void hsvArrayToRgb(const double hsv[3], uint16_t &r, uint16_t &g, uint16_t &b) {
+    uint8_t rr, gg, bb; hsvToRgb((float)hsv[0], (float)hsv[1], (float)hsv[2], rr, gg, bb);
+    r = rr; g = gg; b = bb;
+  }
+
+// Simple approximation to convert color temperature (Kelvin) to RGB.
   // kelvin typical range: 1000..40000
   static void colorTemperatureToRgb(uint16_t kelvin, uint8_t &r, uint8_t &g, uint8_t &b) {
     float temp = kelvin / 100.0f;
