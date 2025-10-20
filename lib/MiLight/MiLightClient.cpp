@@ -7,6 +7,18 @@
 #include <ParsedColor.h>
 #include <MiLightCommands.h>
 #include <functional>
+#if defined(ARDUINO_ARCH_ESP32)
+  #ifdef printf_P
+    #undef printf_P
+  #endif
+  #ifndef PSTR
+    #define PSTR(x) x
+  #endif
+  // printf portable
+  #define MIHUB_PRINTF(fmt, ...) Serial.printf(fmt, ##__VA_ARGS__)
+#else
+  #define MIHUB_PRINTF(fmt, ...) Serial.printf_P(PSTR(fmt), ##__VA_ARGS__)
+#endif
 
 
 using namespace std::placeholders;
@@ -507,7 +519,7 @@ void MiLightClient::handleTransition(GroupStateField field, JsonVariant value, f
   }
 
   if (transitionBuilder == nullptr) {
-    Serial.printf_P(PSTR("Unsupported transition field: %s\n"), GroupStateFieldHelpers::getFieldName(field));
+    MIHUB_PRINTF("Unsupported transition field: %s\n", GroupStateFieldHelpers::getFieldName(field));
     return;
   }
 
