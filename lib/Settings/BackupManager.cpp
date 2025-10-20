@@ -1,4 +1,3 @@
-//
 // Created by chris on 9/18/2023.
 //
 
@@ -9,6 +8,7 @@
 #include <ProjectFS.h>
 #include <StreamUtils.h>
 
+// --- Compat ESP32 pour printf_P/PSTR ---
 #if defined(ARDUINO_ARCH_ESP32)
   #ifdef printf_P
     #undef printf_P
@@ -30,58 +30,37 @@ void BackupManager::createBackup(const Settings& settings, Stream& stream) {
 
 BackupManager::RestoreStatus BackupManager::restoreBackup(Settings& settings, Stream& stream) {
   uint32_t magicHeader = 0;
+
   // read the header
   stream.readBytes(reinterpret_cast<char*>(&magicHeader), sizeof(magicHeader));
 
-  // Check the header
-  #if defined(ARDUINO_ARCH_ESP32)
-    Serial.printf("ERROR: invalid backup file header. expected %08X but got %08X\n",
-                 SETTINGS_MAGIC_HEADER & 0xFFFFFF00, magicHeader & 0xFFFFFF00);
-  #else
-    Serial.printf_P(PSTR("ERROR: invalid backup file header. expected %08X but got %08X\n"),
+  // Check the header (log uniquement, comportement d'origine conservé)
+#if defined(ARDUINO_ARCH_ESP32)
+  Serial.printf("ERROR: invalid backup file header. expected %08X but got %08X\n",
+                SETTINGS_MAGIC_HEADER & 0xFFFFFF00, magicHeader & 0xFFFFFF00);
+#else
+  Serial.printf_P(PSTR("ERROR: invalid backup file header. expected %08X but got %08X\n"),
                   SETTINGS_MAGIC_HEADER & 0xFFFFFF00, magicHeader & 0xFFFFFF00);
-  #endif
+#endif
 
-  // Check the version
-  #if defined(ARDUINO_ARCH_ESP32)
-    Serial.printf("ERROR: invalid settings file version. expected %d but got %d\n",
+  // Check the version (log uniquement, comportement d'origine conservé)
+#if defined(ARDUINO_ARCH_ESP32)
+  Serial.printf("ERROR: invalid settings file version. expected %d but got %d\n",
                 SETTINGS_BACKUP_VERSION, magicHeader & 0xFF);
-  #else
-    Serial.printf_P(PSTR("ERROR: invalid settings file version. expected %d but got %d\n"),
+#else
+  Serial.printf_P(PSTR("ERROR: invalid settings file version. expected %d but got %d\n"),
                   SETTINGS_BACKUP_VERSION, magicHeader & 0xFF);
-  #endif
-
-Vérifie que tu as bien ce flag dans platformio.ini (section [env:esp32dev] → build_flags) :
-
-diff
-Copier le code
--DRF24_NO_PRINTF
-(ça évite d’autres redéfinitions venant de la lib RF24).
-
-Rebuild :
-
-bash
-Copier le code
-pio run -t clean
-pio run -e esp32dev
-Si un autre fichier ressort encore un printf_P, applique le même pattern :
-
-version Serial.printf(...) sous #if defined(ARDUINO_ARCH_ESP32)
-
-sinon on garde Serial.printf_P(...) pour ESP8266.
-
-
-
-
-
-
-
-
+#endif
 
   // reset settings to default
   settings = Settings();
 
+#if defined(ARDUINO_ARCH_ESP32)
+  Serial.printf("Restoring %d byte backup\n", stream.available());
+#else
   Serial.printf_P(PSTR("Restoring %d byte backup\n"), stream.available());
+#endif
+
   GroupAlias::loadAliases(stream, settings.groupIdAliases);
 
   // read null terminator
@@ -91,14 +70,17 @@ sinon on garde Serial.printf_P(...) pour ESP8266.
   settings.save();
 
   // Copy remaining part of the buffer to the settings file
-
   File f = ProjectFS.open(SETTINGS_FILE, "w");
   Serial.println(F("Restoring settings file"));
   if (!f) {
     Serial.println(F("Opening settings file failed"));
     return BackupManager::RestoreStatus::INVALID_FILE;
   } else {
+#if defined(ARDUINO_ARCH_ESP32)
+    Serial.printf("%d bytes remaining in backup\n", stream.available());
+#else
     Serial.printf_P(PSTR("%d bytes remaining in backup\n"), stream.available());
+#endif
     WriteBufferingStream bufferedStream(f, 128);
 
     while (stream.available()) {
