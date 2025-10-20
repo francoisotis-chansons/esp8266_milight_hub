@@ -9,6 +9,14 @@
 #include <ProjectFS.h>
 #include <StreamUtils.h>
 
+#if defined(ARDUINO_ARCH_ESP32)
+  #ifdef printf_P
+    #undef printf_P
+  #endif
+  #ifndef PSTR
+    #define PSTR(x) x
+  #endif
+#endif
 
 const uint8_t BackupManager::SETTINGS_BACKUP_VERSION = 1;
 const uint32_t BackupManager::SETTINGS_MAGIC_HEADER = 0x92A7C300 | SETTINGS_BACKUP_VERSION;
@@ -26,16 +34,49 @@ BackupManager::RestoreStatus BackupManager::restoreBackup(Settings& settings, St
   stream.readBytes(reinterpret_cast<char*>(&magicHeader), sizeof(magicHeader));
 
   // Check the header
-  if ((magicHeader & 0xFFFFFF00) != (SETTINGS_MAGIC_HEADER & 0xFFFFFF00)) {
-    Serial.printf_P(PSTR("ERROR: invalid backup file header. expected %08X but got %08X\n"), SETTINGS_MAGIC_HEADER & 0xFFFFFF00, magicHeader & 0xFFFFFF00);
-    return BackupManager::RestoreStatus::INVALID_HEADER;
-  }
+  #if defined(ARDUINO_ARCH_ESP32)
+    Serial.printf("ERROR: invalid backup file header. expected %08X but got %08X\n",
+                 SETTINGS_MAGIC_HEADER & 0xFFFFFF00, magicHeader & 0xFFFFFF00);
+  #else
+    Serial.printf_P(PSTR("ERROR: invalid backup file header. expected %08X but got %08X\n"),
+                  SETTINGS_MAGIC_HEADER & 0xFFFFFF00, magicHeader & 0xFFFFFF00);
+  #endif
 
   // Check the version
-  if ((magicHeader & 0xFF) != SETTINGS_BACKUP_VERSION) {
-    Serial.printf_P(PSTR("ERROR: invalid settings file version. expected %d but got %d\n"), SETTINGS_BACKUP_VERSION, magicHeader & 0xFF);
-    return BackupManager::RestoreStatus::INVALID_VERSION;
-  }
+  #if defined(ARDUINO_ARCH_ESP32)
+    Serial.printf("ERROR: invalid settings file version. expected %d but got %d\n",
+                SETTINGS_BACKUP_VERSION, magicHeader & 0xFF);
+  #else
+    Serial.printf_P(PSTR("ERROR: invalid settings file version. expected %d but got %d\n"),
+                  SETTINGS_BACKUP_VERSION, magicHeader & 0xFF);
+  #endif
+
+Vérifie que tu as bien ce flag dans platformio.ini (section [env:esp32dev] → build_flags) :
+
+diff
+Copier le code
+-DRF24_NO_PRINTF
+(ça évite d’autres redéfinitions venant de la lib RF24).
+
+Rebuild :
+
+bash
+Copier le code
+pio run -t clean
+pio run -e esp32dev
+Si un autre fichier ressort encore un printf_P, applique le même pattern :
+
+version Serial.printf(...) sous #if defined(ARDUINO_ARCH_ESP32)
+
+sinon on garde Serial.printf_P(...) pour ESP8266.
+
+
+
+
+
+
+
+
 
   // reset settings to default
   settings = Settings();
