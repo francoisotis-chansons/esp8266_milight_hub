@@ -4,6 +4,7 @@
 #include <RGBConverter.h>
 #include <BulbId.h>
 #include <MiLightCommands.h>
+
 #if defined(ARDUINO_ARCH_ESP32)
   #ifdef printf_P
     #undef printf_P
@@ -212,7 +213,11 @@ bool GroupState::clearField(GroupStateField field) {
       break;
 
     default:
+#if defined(ARDUINO_ARCH_ESP32)
+      Serial.printf("Attempted to clear unknown field: %d\n", static_cast<uint8_t>(field));
+#else
       Serial.printf_P(PSTR("Attempted to clear unknown field: %d\n"), static_cast<uint8_t>(field));
+#endif
       break;
   }
 
@@ -399,10 +404,6 @@ bool GroupState::setState(const MiLightStatus status) {
 }
 
 bool GroupState::isSetBrightness() const {
-  // If we don't know what mode we're in, just assume white mode.  Do this for a few
-  // reasons:
-  //   * Some bulbs don't have multiple modes
-  //   * It's confusing to not have a default
   if (! isSetBulbMode()) {
     return state.fields._isSetBrightness;
   }
@@ -520,7 +521,6 @@ bool GroupState::setSaturation(uint8_t saturation) {
 
 bool GroupState::isSetMode() const { return state.fields._isSetMode; }
 bool GroupState::isSetEffect() const {
-  // only BULB_MODE_COLOR does not have an effect.
   return isSetBulbMode() && getBulbMode() != BULB_MODE_COLOR;
 }
 uint8_t GroupState::getMode() const { return state.fields._mode; }
@@ -560,9 +560,6 @@ bool GroupState::isSetBulbMode() const {
   return  (isSetNightMode() && isNightMode()) || state.fields._isSetBulbMode;
 }
 BulbMode GroupState::getBulbMode() const {
-  // Night mode is a transient state.  When power is toggled, the bulb returns
-  // to the state it was last in.  To handle this case, night mode state is
-  // stored separately.
   if (isSetNightMode() && isNightMode()) {
     return BULB_MODE_NIGHT;
   } else {
@@ -576,7 +573,6 @@ bool GroupState::setBulbMode(BulbMode bulbMode) {
 
   setDirty();
 
-  // As mentioned in isSetBulbMode, NIGHT_MODE is stored separately.
   if (bulbMode == BULB_MODE_NIGHT) {
     setNightMode(true);
   } else {
@@ -641,7 +637,6 @@ bool GroupState::applyIncrementCommand(GroupStateField field, IncrementDirection
 
   int8_t dirValue = static_cast<int8_t>(dir);
 
-  // If there's already a known value, update it
   if (previousState != NULL && previousState->isSetField(field)) {
     int8_t currentValue = static_cast<int8_t>(previousState->getFieldValue(field));
     int8_t newValue = currentValue + (dirValue * INCREMENT_COMMAND_VALUE);
@@ -650,11 +645,9 @@ bool GroupState::applyIncrementCommand(GroupStateField field, IncrementDirection
     previousState->debugState("Updating field from increment command");
 #endif
 
-    // For now, assume range for both brightness and kelvin is [0, 100]
     setFieldValue(field, constrain(newValue, 0, 100));
 
     return true;
-  // Otherwise start or update scratch state
   } else {
     if (isSetScratchField(field)) {
       int8_t newValue = static_cast<int8_t>(getScratchFieldValue(field)) + dirValue;
@@ -716,14 +709,9 @@ void GroupState::patch(const GroupState& other) {
   for (size_t i = 0; i < size(ALL_PHYSICAL_FIELDS); ++i) {
     GroupStateField field = ALL_PHYSICAL_FIELDS[i];
 
-    // Handle night mode separately.  Should always set this field.
     if (field == GroupStateField::BULB_MODE && other.isNightMode()) {
       setFieldValue(field, other.getFieldValue(field));
     }
-    // Otherwise...
-    // Conditions:
-    //   * Only set anything if field is set in other state
-    //   * Do not patch anything other than STATE if bulb is off
     else if (other.isSetField(field) && (field == GroupStateField::STATE || isOn())) {
       setFieldValue(field, other.getFieldValue(field));
     }
@@ -732,21 +720,12 @@ void GroupState::patch(const GroupState& other) {
   for (size_t i = 0; i < size(ALL_SCRATCH_FIELDS); ++i) {
     GroupStateField field = ALL_SCRATCH_FIELDS[i];
 
-    // All scratch field updates require that the bulb is on.
     if (isOn() && other.isSetScratchField(field)) {
       setScratchFieldValue(field, other.getScratchFieldValue(field));
     }
   }
 }
 
-/*
-  Update group state to reflect a packet state
-
-  Called both when a packet is sent locally, and when an intercepted packet is read
-  (see main.cpp onPacketSentHandler)
-
-  Returns true if the packet changes affects a state change
-*/
 bool GroupState::patch(JsonObject state) {
   bool changes = false;
 
@@ -760,9 +739,6 @@ bool GroupState::patch(JsonObject state) {
     bool stateChange = setState(state[GroupStateFieldNames::STATE] == "ON" ? ON : OFF);
     changes |= stateChange;
   }
-
-  // Devices do not support changing their state while off, so don't apply state
-  // changes to devices we know are off.
 
   if (isOn() && state.containsKey(GroupStateFieldNames::BRIGHTNESS)) {
     bool stateChange = setBrightness(Units::rescale(state[GroupStateFieldNames::BRIGHTNESS].as<uint8_t>(), 100, 255));
@@ -844,13 +820,12 @@ void GroupState::applyHexColor(JsonObject state) const {
   state[GroupStateFieldNames::COLOR] = hexColor;
 }
 
-// gather partial state for a single field; see GroupState::applyState to gather many fields
 void GroupState::applyField(JsonObject partialState, const BulbId& bulbId, GroupStateField field) const {
   if (isSetField(field)) {
     switch (field) {
       case GroupStateField::STATE:
       case GroupStateField::STATUS:
-        partialState[GroupStateFieldHelpers::getFieldName(field)] = getState() == ON ? "ON" : "OFF";
+        partialState[GroupStateFieldNames::STATE] = getState() == ON ? "ON" : "OFF";
         break;
 
       case GroupStateField::BRIGHTNESS:
@@ -865,11 +840,6 @@ void GroupState::applyField(JsonObject partialState, const BulbId& bulbId, Group
         partialState[GroupStateFieldNames::BULB_MODE] = BULB_MODE_NAMES[getBulbMode()];
         break;
 
-      // For HomeAssistant. Should report:
-      //   1. "brightness" if no color temp/rgb support
-      //   2. "rgb" if RGB or RGBW bulb and in color mode
-      //   3. "color_temp" if WW or RGBW and in color temp mode
-      //   4. "onoff" if in night mode
       case GroupStateField::COLOR_MODE:
         if (
           MiLightRemoteTypeHelpers::supportsRgb(bulbId.deviceType) 
@@ -972,20 +942,21 @@ void GroupState::applyField(JsonObject partialState, const BulbId& bulbId, Group
         break;
 
       default:
+#if defined(ARDUINO_ARCH_ESP32)
+        Serial.printf("Tried to apply unknown field: %d\n", static_cast<uint8_t>(field));
+#else
         Serial.printf_P(PSTR("Tried to apply unknown field: %d\n"), static_cast<uint8_t>(field));
+#endif
         break;
     }
   }
 }
 
-// helper function to debug the current state (in JSON) to the serial port
 void GroupState::debugState(char const *debugMessage) const {
 #ifdef STATE_DEBUG
-  // using static to keep large buffers off the call stack
   StaticJsonDocument<500> jsonDoc;
   JsonObject jsonState = jsonDoc.to<JsonObject>();
 
-  // define fields to show (if count changes, make sure to update count to applyState below)
   std::vector<GroupStateField> fields({
       GroupStateField::LEVEL,
       GroupStateField::BULB_MODE,
@@ -998,12 +969,9 @@ void GroupState::debugState(char const *debugMessage) const {
       GroupStateField::STATE
   });
 
-  // Fake id
   BulbId id;
 
-  // use applyState to build JSON of all fields (from above)
   applyState(jsonState, id, fields);
-  // convert to string and print
   Serial.printf("%s: ", debugMessage);
   serializeJson(jsonState, Serial);
   Serial.println("");
@@ -1023,7 +991,6 @@ ParsedColor GroupState::getColor() const {
 
   converter.hsvToRgb(
     hue / 360.0,
-    // Default to fully saturated
     sat / 100.0,
     1,
     rgb
@@ -1039,8 +1006,6 @@ ParsedColor GroupState::getColor() const {
   };
 }
 
-// build up a partial state representation based on the specified GrouipStateField array.  Used
-// to gather a subset of states (configurable in the UI) for sending to MQTT and web responses.
 void GroupState::applyState(JsonObject partialState, const BulbId& bulbId, const std::vector<GroupStateField>& fields) const {
   for (std::vector<GroupStateField>::const_iterator itr = fields.begin(); itr != fields.end(); ++itr) {
     applyField(partialState, bulbId, *itr);
