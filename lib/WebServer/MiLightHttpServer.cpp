@@ -15,6 +15,16 @@
 #include <bundle.css.gz.h>
 #include <bundle.js.gz.h>
 #include <BackupManager.h>
+// ----- Compat ESP32 / ProGMEM -----
+#if defined(ARDUINO_ARCH_ESP32)
+  #ifndef PSTR
+    #define PSTR(x) x
+  #endif
+#endif
+
+// Chemins HTTP des assets
+static const char bundle_css_filename[] = "/bundle.css";
+static const char bundle_js_filename[]  = "/bundle.js";
 
 #ifdef ESP32
   #include <SPIFFS.h>
