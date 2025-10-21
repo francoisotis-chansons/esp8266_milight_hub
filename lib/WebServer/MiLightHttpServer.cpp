@@ -315,14 +315,15 @@ void MiLightHttpServer::handleServe_P(const char* data,
   client.stop();
 }
 // ------------------------------------------------------------------
-//  Suppression d'un alias (corrigée pour pathBindings)
+//  Suppression d'un alias (compatible RichHttpServer 3.1.0)
 // ------------------------------------------------------------------
 void MiLightHttpServer::handleDeleteAlias(RequestContext& request) {
   String aliasId;
 
-  // Récupère :id depuis l'URL (/aliases/:id)
-  if (request.pathBindings && request.pathBindings->hasBinding(F("id"))) {
-    aliasId = request.pathBindings->get(F("id"));
+  // Accès aux bindings de chemin via l'accesseur public
+  auto bindingsPtr = request.getPathBindings();  // std::shared_ptr<UrlTokenBindings>
+  if (bindingsPtr && bindingsPtr->hasBinding("id")) {
+    aliasId = bindingsPtr->get("id");
   }
 
   bool removed = false;
