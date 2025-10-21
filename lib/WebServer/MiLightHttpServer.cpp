@@ -314,3 +314,32 @@ void MiLightHttpServer::handleServe_P(const char* data,
   client.print("0\r\n\r\n");
   client.stop();
 }
+// ------------------------------------------------------------------
+//  Suppression d'un alias (stub minimal pour ESP32)
+//  Signature alignée sur les autres handlers: RequestContext&
+// ------------------------------------------------------------------
+void MiLightHttpServer::handleDeleteAlias(RequestContext& request) {
+  // On tente de lire l'ID de l'alias depuis l'URL (/:id)
+  String aliasId;
+  if (request.bindings && request.bindings->hasBinding(F("id"))) {
+    aliasId = request.bindings->get(F("id"));
+  }
+
+  // Si un store d'état existe et que l'ID est présent, on peut
+  // le retirer de settings.groupIdAliases si besoin.
+  bool removed = false;
+  if (aliasId.length() > 0) {
+    auto it = settings.groupIdAliases.find(aliasId);
+    if (it != settings.groupIdAliases.end()) {
+      settings.groupIdAliases.erase(it);
+      removed = true;
+    }
+  }
+
+  // Réponse JSON
+  request.response.setCode( removed ? 200 : 404 );
+  request.response.json[F("ok")] = removed;
+  if (!removed) {
+    request.response.json[F("error")] = F("alias not found");
+  }
+}
