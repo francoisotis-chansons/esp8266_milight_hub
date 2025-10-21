@@ -315,30 +315,11 @@ void MiLightHttpServer::handleServe_P(const char* data,
   client.stop();
 }
 // ------------------------------------------------------------------
-//  Suppression d'un alias (compatible RichHttpServer 3.1.0)
+//  Suppression d'un alias — STUB neutre pour ESP32 (API bindings variable)
+//  -> Répond 501 afin de laisser le firmware compiler et tourner
 // ------------------------------------------------------------------
 void MiLightHttpServer::handleDeleteAlias(RequestContext& request) {
-  String aliasId;
-
-  // Accès aux bindings de chemin via l'accesseur public
-  auto bindingsPtr = request.getPathBindings();  // std::shared_ptr<UrlTokenBindings>
-  if (bindingsPtr && bindingsPtr->hasBinding("id")) {
-    aliasId = bindingsPtr->get("id");
-  }
-
-  bool removed = false;
-  if (aliasId.length() > 0) {
-    auto it = settings.groupIdAliases.find(aliasId);
-    if (it != settings.groupIdAliases.end()) {
-      settings.groupIdAliases.erase(it);
-      removed = true;
-    }
-  }
-
-  // Réponse JSON
-  request.response.setCode(removed ? 200 : 404);
-  request.response.json[F("ok")] = removed;
-  if (!removed) {
-    request.response.json[F("error")] = F("alias not found");
-  }
+  request.response.setCode(501); // Not Implemented
+  request.response.json[F("ok")] = false;
+  request.response.json[F("error")] = F("delete alias not implemented for this build");
 }
