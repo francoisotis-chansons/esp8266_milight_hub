@@ -323,3 +323,206 @@ void MiLightHttpServer::handleDeleteAlias(RequestContext& request) {
   request.response.json[F("ok")] = false;
   request.response.json[F("error")] = F("delete alias not implemented for this build");
 }
+// ===================================================================
+// STUBS MINIMAUX POUR FINALISER LA COMPILATION / LIEN
+// (Implémentations neutres des méthodes référencées dans begin())
+// ===================================================================
+
+void MiLightHttpServer::onSettingsSaved(std::function<void ()> cb) {
+  // Stub: on ignore le callback pour ce build
+  (void)cb;
+}
+
+void MiLightHttpServer::onGroupDeleted(std::function<void (const BulbId&)> cb) {
+  // Stub: on ignore le callback pour ce build
+  (void)cb;
+}
+
+void MiLightHttpServer::handlePacketSent(
+    unsigned char* /*packet*/,
+    const MiLightRemoteConfig& /*remoteConfig*/,
+    const BulbId& /*bulbId*/,
+    const ArduinoJson::JsonObject& /*result*/
+) {
+  // Stub: rien à faire
+}
+
+// --------- GET /settings ----------
+void MiLightHttpServer::serveSettings() {
+  // Réponse minimaliste (vide) pour que l’UI ne plante pas
+  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  server.send(200, "application/json");
+  server.sendContent("{}");
+  server.sendContent("");
+  server.client().stop();
+}
+
+// --------- PUT /settings ----------
+void MiLightHttpServer::handleUpdateSettings(RequestContext& request) {
+  request.response.setCode(501);
+  request.response.json[F("ok")] = false;
+  request.response.json[F("error")] = F("handleUpdateSettings not implemented");
+}
+
+// --------- POST /settings (form/upload) ----------
+void MiLightHttpServer::handleUpdateSettingsPost(RequestContext& request) {
+  request.response.setCode(501);
+  request.response.json[F("ok")] = false;
+  request.response.json[F("error")] = F("handleUpdateSettingsPost not implemented");
+}
+
+// --------- Upload générique d’un fichier ----------
+void MiLightHttpServer::handleUpdateFile(const char* /*path*/) {
+  // Cette méthode est souvent utilisée comme handler d’upload binaire.
+  // Stub no-op : rien à faire ici pour compiler.
+}
+
+// --------- POST /backup (restore) ----------
+void MiLightHttpServer::handleRestoreBackup(RequestContext& request) {
+  request.response.setCode(501);
+  request.response.json[F("ok")] = false;
+  request.response.json[F("error")] = F("handleRestoreBackup not implemented");
+}
+
+// --------- GET /remote_configs ----------
+void MiLightHttpServer::handleGetRadioConfigs(RequestContext& request) {
+  request.response.setCode(200);
+  request.response.json.createNestedArray(F("remotes")); // vide
+}
+
+// --------- GET /gateway_traffic[/:type] ----------
+void MiLightHttpServer::handleListenGateway(RequestContext& request) {
+  request.response.setCode(501);
+  request.response.json[F("ok")] = false;
+  request.response.json[F("error")] = F("handleListenGateway not implemented");
+}
+
+// --------- /gateways/:device_id/:type/:group_id ----------
+void MiLightHttpServer::handleUpdateGroup(RequestContext& request) {
+  request.response.setCode(501);
+  request.response.json[F("ok")] = false;
+  request.response.json[F("error")] = F("handleUpdateGroup not implemented");
+}
+
+void MiLightHttpServer::handleDeleteGroup(RequestContext& request) {
+  request.response.setCode(501);
+  request.response.json[F("ok")] = false;
+  request.response.json[F("error")] = F("handleDeleteGroup not implemented");
+}
+
+void MiLightHttpServer::handleGetGroup(RequestContext& request) {
+  request.response.setCode(200);
+  request.response.json[F("state")] = ArduinoJson::VariantConst(); // null
+}
+
+// --------- /gateways/:device_alias ----------
+void MiLightHttpServer::handleUpdateGroupAlias(RequestContext& request) {
+  request.response.setCode(501);
+  request.response.json[F("ok")] = false;
+  request.response.json[F("error")] = F("handleUpdateGroupAlias not implemented");
+}
+
+void MiLightHttpServer::handleDeleteGroupAlias(RequestContext& request) {
+  request.response.setCode(501);
+  request.response.json[F("ok")] = false;
+  request.response.json[F("error")] = F("handleDeleteGroupAlias not implemented");
+}
+
+void MiLightHttpServer::handleGetGroupAlias(RequestContext& request) {
+  request.response.setCode(200);
+  request.response.json[F("alias")] = ArduinoJson::VariantConst(); // null
+}
+
+// --------- /gateways (batch PUT) ----------
+void MiLightHttpServer::handleBatchUpdateGroups(RequestContext& request) {
+  request.response.setCode(501);
+  request.response.json[F("ok")] = false;
+  request.response.json[F("error")] = F("handleBatchUpdateGroups not implemented");
+}
+
+// --------- /transitions/:id ----------
+void MiLightHttpServer::handleGetTransition(RequestContext& request) {
+  request.response.setCode(200);
+  request.response.json[F("transition")] = ArduinoJson::VariantConst(); // null
+}
+
+void MiLightHttpServer::handleDeleteTransition(RequestContext& request) {
+  request.response.setCode(501);
+  request.response.json[F("ok")] = false;
+  request.response.json[F("error")] = F("handleDeleteTransition not implemented");
+}
+
+// --------- /transitions ----------
+void MiLightHttpServer::handleListTransitions(RequestContext& request) {
+  request.response.setCode(200);
+  request.response.json.createNestedArray(F("transitions")); // vide
+}
+
+void MiLightHttpServer::handleCreateTransition(RequestContext& request) {
+  request.response.setCode(501);
+  request.response.json[F("ok")] = false;
+  request.response.json[F("error")] = F("handleCreateTransition not implemented");
+}
+
+// --------- /raw_commands/:type ----------
+void MiLightHttpServer::handleSendRaw(RequestContext& request) {
+  request.response.setCode(501);
+  request.response.json[F("ok")] = false;
+  request.response.json[F("error")] = F("handleSendRaw not implemented");
+}
+
+// --------- /about ----------
+void MiLightHttpServer::handleAbout(RequestContext& request) {
+  request.response.setCode(200);
+  request.response.json[F("version")] = F("custom-esp32-build");
+}
+
+// --------- /system (POST) ----------
+void MiLightHttpServer::handleSystemPost(RequestContext& request) {
+  request.response.setCode(501);
+  request.response.json[F("ok")] = false;
+  request.response.json[F("error")] = F("handleSystemPost not implemented");
+}
+
+// --------- /aliases (GET/POST) ----------
+void MiLightHttpServer::handleListAliases(RequestContext& request) {
+  request.response.setCode(200);
+  request.response.json.createNestedArray(F("aliases")); // vide
+}
+
+void MiLightHttpServer::handleCreateAlias(RequestContext& request) {
+  request.response.setCode(501);
+  request.response.json[F("ok")] = false;
+  request.response.json[F("error")] = F("handleCreateAlias not implemented");
+}
+
+// --------- /aliases.bin (GET) ----------
+void MiLightHttpServer::serveFile(const char* path, const char* contentType) {
+  File f = ProjectFS.open(path, "r");
+  if (!f) {
+    server.send(404, "application/json", "{\"error\":\"file not found\"}");
+    return;
+  }
+  server.streamFile(f, contentType ? contentType : APPLICATION_OCTET_STREAM);
+  f.close();
+}
+
+// --------- /aliases.bin (DELETE/POST) ----------
+void MiLightHttpServer::handleDeleteAliases(RequestContext& request) {
+  request.response.setCode(501);
+  request.response.json[F("ok")] = false;
+  request.response.json[F("error")] = F("handleDeleteAliases not implemented");
+}
+
+void MiLightHttpServer::handleUpdateAliases(RequestContext& request) {
+  request.response.setCode(501);
+  request.response.json[F("ok")] = false;
+  request.response.json[F("error")] = F("handleUpdateAliases not implemented");
+}
+
+// --------- /aliases/:id (PUT) ----------
+void MiLightHttpServer::handleUpdateAlias(RequestContext& request) {
+  request.response.setCode(501);
+  request.response.json[F("ok")] = false;
+  request.response.json[F("error")] = F("handleUpdateAlias not implemented");
+}
