@@ -23,6 +23,9 @@
   #endif
 #endif
 
+// Pour std::bind placeholders (_1, _2, …)
+using namespace std::placeholders;
+
 // Chemins HTTP des assets
 static const char bundle_css_filename[] = "/bundle.css";
 static const char bundle_js_filename[]  = "/bundle.js";
@@ -36,7 +39,7 @@ void MiLightHttpServer::begin() {
   // /
   server.buildHandler("/")
     .onSimple(HTTP_GET, [&](const UrlTokenBindings*){
-      this->handleServe_P(reinterpret_cast<const uint8_t*>(index_html_gz),
+      this->handleServe_P(reinterpret_cast<const char*>(index_html_gz),
                           static_cast<size_t>(index_html_gz_len),
                           "text/html");
     });
@@ -44,7 +47,7 @@ void MiLightHttpServer::begin() {
   // /bundle.css
   server.buildHandler(bundle_css_filename)
     .onSimple(HTTP_GET, [&](const UrlTokenBindings*){
-      this->handleServe_P(reinterpret_cast<const uint8_t*>(bundle_css_gz),
+      this->handleServe_P(reinterpret_cast<const char*>(bundle_css_gz),
                           static_cast<size_t>(bundle_css_gz_len),
                           "text/css");
     });
@@ -52,7 +55,7 @@ void MiLightHttpServer::begin() {
   // /bundle.js
   server.buildHandler(bundle_js_filename)
     .onSimple(HTTP_GET, [&](const UrlTokenBindings*){
-      this->handleServe_P(reinterpret_cast<const uint8_t*>(bundle_js_gz),
+      this->handleServe_P(reinterpret_cast<const char*>(bundle_js_gz),
                           static_cast<size_t>(bundle_js_gz_len),
                           "application/javascript");
     });
@@ -60,20 +63,20 @@ void MiLightHttpServer::begin() {
   server
     .buildHandler("/settings")
     .on(HTTP_GET, std::bind(&MiLightHttpServer::serveSettings, this))
-    .on(HTTP_PUT, std::bind(&MiLightHttpServer::handleUpdateSettings, this, _1))
+    .on(HTTP_PUT,  std::bind(&MiLightHttpServer::handleUpdateSettings, this, _1))
     .on(
       HTTP_POST,
       std::bind(&MiLightHttpServer::handleUpdateSettingsPost, this, _1),
-      std::bind(&MiLightHttpServer::handleUpdateFile, this, SETTINGS_FILE)
+      std::bind(&MiLightHttpServer::handleUpdateFile,        this, SETTINGS_FILE)
     );
 
   server
     .buildHandler("/backup")
-    .on(HTTP_GET, std::bind(&MiLightHttpServer::handleCreateBackup, this, _1))
+    .on(HTTP_GET,  std::bind(&MiLightHttpServer::handleCreateBackup, this, _1))
     .on(
         HTTP_POST,
         std::bind(&MiLightHttpServer::handleRestoreBackup, this, _1),
-        std::bind(&MiLightHttpServer::handleUpdateFile, this, BACKUP_FILE));
+        std::bind(&MiLightHttpServer::handleUpdateFile,    this, BACKUP_FILE));
 
   server
     .buildHandler("/remote_configs")
@@ -88,31 +91,31 @@ void MiLightHttpServer::begin() {
 
   server
     .buildHandler("/gateways/:device_id/:type/:group_id")
-    .on(HTTP_PUT, std::bind(&MiLightHttpServer::handleUpdateGroup, this, _1))
-    .on(HTTP_POST, std::bind(&MiLightHttpServer::handleUpdateGroup, this, _1))
+    .on(HTTP_PUT,    std::bind(&MiLightHttpServer::handleUpdateGroup, this, _1))
+    .on(HTTP_POST,   std::bind(&MiLightHttpServer::handleUpdateGroup, this, _1))
     .on(HTTP_DELETE, std::bind(&MiLightHttpServer::handleDeleteGroup, this, _1))
-    .on(HTTP_GET, std::bind(&MiLightHttpServer::handleGetGroup, this, _1));
+    .on(HTTP_GET,    std::bind(&MiLightHttpServer::handleGetGroup,    this, _1));
 
   server
     .buildHandler("/gateways/:device_alias")
-    .on(HTTP_PUT, std::bind(&MiLightHttpServer::handleUpdateGroupAlias, this, _1))
-    .on(HTTP_POST, std::bind(&MiLightHttpServer::handleUpdateGroupAlias, this, _1))
+    .on(HTTP_PUT,    std::bind(&MiLightHttpServer::handleUpdateGroupAlias, this, _1))
+    .on(HTTP_POST,   std::bind(&MiLightHttpServer::handleUpdateGroupAlias, this, _1))
     .on(HTTP_DELETE, std::bind(&MiLightHttpServer::handleDeleteGroupAlias, this, _1))
-    .on(HTTP_GET, std::bind(&MiLightHttpServer::handleGetGroupAlias, this, _1));
+    .on(HTTP_GET,    std::bind(&MiLightHttpServer::handleGetGroupAlias,    this, _1));
 
   server
     .buildHandler("/gateways")
-    .onSimple(HTTP_GET, std::bind(&MiLightHttpServer::handleListGroups, this))
+    .onSimple(HTTP_GET, [&](const UrlTokenBindings*){ this->handleListGroups(); })
     .on(HTTP_PUT, std::bind(&MiLightHttpServer::handleBatchUpdateGroups, this, _1));
 
   server
     .buildHandler("/transitions/:id")
-    .on(HTTP_GET, std::bind(&MiLightHttpServer::handleGetTransition, this, _1))
+    .on(HTTP_GET,    std::bind(&MiLightHttpServer::handleGetTransition,    this, _1))
     .on(HTTP_DELETE, std::bind(&MiLightHttpServer::handleDeleteTransition, this, _1));
 
   server
     .buildHandler("/transitions")
-    .on(HTTP_GET, std::bind(&MiLightHttpServer::handleListTransitions, this, _1))
+    .on(HTTP_GET,  std::bind(&MiLightHttpServer::handleListTransitions, this, _1))
     .on(HTTP_POST, std::bind(&MiLightHttpServer::handleCreateTransition, this, _1));
 
   server
@@ -129,22 +132,22 @@ void MiLightHttpServer::begin() {
 
   server
     .buildHandler("/aliases")
-    .on(HTTP_GET, std::bind(&MiLightHttpServer::handleListAliases, this, _1))
+    .on(HTTP_GET,  std::bind(&MiLightHttpServer::handleListAliases,  this, _1))
     .on(HTTP_POST, std::bind(&MiLightHttpServer::handleCreateAlias, this, _1));
 
   server
     .buildHandler("/aliases.bin")
-    .on(HTTP_GET, std::bind(&MiLightHttpServer::serveFile, this, ALIASES_FILE, APPLICATION_OCTET_STREAM))
+    .on(HTTP_GET,    std::bind(&MiLightHttpServer::serveFile,        this, ALIASES_FILE, APPLICATION_OCTET_STREAM))
     .on(HTTP_DELETE, std::bind(&MiLightHttpServer::handleDeleteAliases, this, _1))
     .on(
         HTTP_POST,
         std::bind(&MiLightHttpServer::handleUpdateAliases, this, _1),
-        std::bind(&MiLightHttpServer::handleUpdateFile, this, ALIASES_FILE)
+        std::bind(&MiLightHttpServer::handleUpdateFile,    this, ALIASES_FILE)
     );
 
   server
     .buildHandler("/aliases/:id")
-    .on(HTTP_PUT, std::bind(&MiLightHttpServer::handleUpdateAlias, this, _1))
+    .on(HTTP_PUT,    std::bind(&MiLightHttpServer::handleUpdateAlias, this, _1))
     .on(HTTP_DELETE, std::bind(&MiLightHttpServer::handleDeleteAlias, this, _1));
 
   server
@@ -181,7 +184,9 @@ void MiLightHttpServer::on(const char *path, HTTPMethod method, THandlerFunction
   server.on(path, method, handler);
 }
 
-// (… le reste du fichier inchangé, à l’exception des printf_P ci-dessous …)
+// ------------------------------------------------------------------
+//  Divers handlers (seuls changements: printf_P → printf / print)
+// ------------------------------------------------------------------
 
 void MiLightHttpServer::handleWsEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length) {
   switch (type) {
@@ -196,7 +201,6 @@ void MiLightHttpServer::handleWsEvent(uint8_t num, WStype_t type, uint8_t *paylo
       break;
 
     default:
-      // ESP32: pas de printf_P
       Serial.printf("Unhandled websocket event: %d\n", static_cast<uint8_t>(type));
       break;
   }
@@ -217,7 +221,6 @@ void MiLightHttpServer::handleCreateBackup(RequestContext &request) {
   backupFile.close();
 
   backupFile = ProjectFS.open(BACKUP_FILE, "r");
-  // ESP32: pas de printf_P
   Serial.printf("Sending backup file of size %d\n", (int)backupFile.size());
   server.streamFile(backupFile, APPLICATION_OCTET_STREAM);
 
@@ -242,10 +245,10 @@ void MiLightHttpServer::handleListGroups() {
 
     JsonObject device = stateBuffer.createNestedObject(F("device"));
 
-    device[F("alias")] = group.first;
-    device[F("id")] = group.second.id;
-    device[F("device_id")] = group.second.bulbId.deviceId;
-    device[F("group_id")] = group.second.bulbId.groupId;
+    device[F("alias")]      = group.first;
+    device[F("id")]         = group.second.id;
+    device[F("device_id")]  = group.second.bulbId.deviceId;
+    device[F("group_id")]   = group.second.bulbId.groupId;
     device[F("device_type")] = MiLightRemoteTypeHelpers::remoteTypeToString(group.second.bulbId.deviceType);
     
     GroupState* state = this->stateStore->get(group.second.bulbId);
@@ -255,12 +258,11 @@ void MiLightHttpServer::handleListGroups() {
       state->applyState(outputState, group.second.bulbId, NORMALIZED_GROUP_STATE_FIELDS);
     }
 
-    client.printf("%zx\r\n", measureJson(stateBuffer)+(firstGroup ? 0 : 1));
+    client.printf("%zx\r\n", measureJson(stateBuffer) + (firstGroup ? 0 : 1));
     if (!firstGroup) {
       client.print(',');
     }
     serializeJson(stateBuffer, client);
-    // ESP32: pas de printf_P
     client.print("\r\n");
 
     firstGroup = false;
@@ -275,8 +277,13 @@ void MiLightHttpServer::handleListGroups() {
   server.client().stop();
 }
 
-// --- Serveur de fichiers GZIP en chunks (type adapté ESP32)
-void MiLightHttpServer::handleServe_P(const uint8_t* data, size_t length, const char* contentType) {
+// ------------------------------------------------------------------
+//  Envoi d'un buffer gzip stocké en PROGMEM (chunked) – signature
+//  identique au .h : const char* + size_t + contentType
+// ------------------------------------------------------------------
+void MiLightHttpServer::handleServe_P(const char* data,
+                                      size_t length,
+                                      const char* contentType) {
   const size_t CHUNK_SIZE = 4096;
 
   server.setContentLength(CONTENT_LENGTH_UNKNOWN);
@@ -286,7 +293,9 @@ void MiLightHttpServer::handleServe_P(const uint8_t* data, size_t length, const 
 
   WiFiClient client = server.client();
 
+  const uint8_t* p = reinterpret_cast<const uint8_t*>(data);
   size_t remaining = length;
+
   while (remaining > 0) {
     size_t chunk = remaining > CHUNK_SIZE ? CHUNK_SIZE : remaining;
 
@@ -294,10 +303,10 @@ void MiLightHttpServer::handleServe_P(const uint8_t* data, size_t length, const 
     client.printf("%X\r\n", (unsigned)chunk);
 
     // données
-    client.write_P(data, chunk);
+    client.write(p, chunk);
     client.print("\r\n");
 
-    data += chunk;
+    p         += chunk;
     remaining -= chunk;
   }
 
